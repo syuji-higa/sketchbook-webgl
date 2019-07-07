@@ -1,0 +1,25 @@
+{
+  "name": "sketchbook-webgl",
+  "version": "1.0.0",
+  "description": "WebGL Sketchbook",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev": "run(){ npm run dev -prefix projects/$1; }; run",
+    "prod": "run(){ npm run prod -prefix projects/$1; }; run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/syuji-higa/sketchbook-webgl.git"
+  },
+  "keywords": [
+    "WebGL"
+  ],
+  "author": "syuji-higa",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/syuji-higa/sketchbook-webgl/issues"
+  },
+  "homepage": "https://github.com/syuji-higa/sketchbook-webgl#readme"
+}
