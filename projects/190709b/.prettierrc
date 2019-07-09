@@ -1,0 +1,13 @@
+# .prettierrc
+
+overrides:
+- files: [".*.js","*.js"]
+  options:
+    semi: false
+    singleQuote: true
+    arrowParens: "always"
+- files: "src/**/*.ts"
+  options:
+    semi: false
+    singleQuote: true
+    arrowParens: "always"
