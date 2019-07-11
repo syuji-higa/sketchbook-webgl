@@ -1,0 +1,37 @@
+{
+  "name": "scaffold-webgl",
+  "version": "1.0.0",
+  "description": "Scaffold WebGL Project",
+  "main": "index.js",
+  "scripts": {
+    "dev": "webpack-dev-server --mode=development --inline --hot",
+    "prod": "webpack --mode=production"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/syuji-higa/scaffold-webgl.git"
+  },
+  "keywords": [
+    "WebGL"
+  ],
+  "author": "syuji-higa",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/syuji-higa/scaffold-webgl/issues"
+  },
+  "homepage": "https://github.com/syuji-higa/scaffold-webgl#readme",
+  "devDependencies": {
+    "@types/webgl-ext": "0.0.30",
+    "bowser": "^2.4.0",
+    "copy-webpack-plugin": "^5.0.3",
+    "core-js": "^3.1.4",
+    "ts-loader": "^6.0.4",
+    "tweakpane": "^1.0.5",
+    "typescript": "^3.5.2",
+    "vanix": "0.0.7",
+    "webpack": "^4.35.0",
+    "webpack-cli": "^3.3.5",
+    "webpack-dev-server": "^3.7.2",
+    "webpack-glsl-loader": "^1.0.1"
+  }
+}
