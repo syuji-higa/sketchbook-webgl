@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Scaffold WebGL</title>
+  <style>
+    html {
+      height: 100%;
+    }
+    body {
+      height: 100%;
+      margin: 0;
+    }
+    .webgl {
+      width: 100%;
+      height: 100%;
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+    video {
+      visibility: hidden;
+      position: absolute;
+      top: -100%;
+      left: -100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="webgl js-webgl"></div>
+  <script src="./main.js" async defer></script>
+</body>
