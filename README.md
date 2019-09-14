@@ -3,11 +3,9 @@ https://syuji-higa.github.io/sketchbook-webgl/
 
 ## Command list
 
-### NPM Install
+### NPM Command
 ```
-npm run install [project name]
-npm run install [project name] [package name]
-npm run install [project name] [package name] -D
+npm run cmd [project name] [...command]
 ```
 
 ### Dev server
