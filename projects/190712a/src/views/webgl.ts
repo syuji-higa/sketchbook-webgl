@@ -231,7 +231,7 @@ class WebGL {
     // init view
     this._matIV.lookAt(
       [0, 0, 1], // camera position
-      [0, 0, 0], // camera front
+      [0, 0, 0], // camera center
       [0, 1, 0], // camera up
       v
     )
