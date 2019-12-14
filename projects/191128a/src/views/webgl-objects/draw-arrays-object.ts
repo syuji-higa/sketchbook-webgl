@@ -2,6 +2,7 @@ import MatIV from '../../utils-webgl/matrix'
 import {
   useProgram,
   createVao,
+  createTransformFeedbackVao,
   createEnableAttributeOptionsList,
   createEnableAttributeDataList,
   createProgramData,
@@ -16,6 +17,8 @@ const { tweakpane }: any = 'DEBUG' in window ? window.DEBUG : {}
 // import shader
 const defaultVertexShader = require('./shaders/draw-arrays-default.vert')
 const defaultFragmentShader = require('./shaders/draw-arrays-default.frag')
+const transformFeedbackVertexShader = require('./shaders/draw-arrays-transform-feedback.vert')
+const transformFeedbackFragmentShader = require('./shaders/draw-arrays-transform-feedback.frag')
 
 type State = {
   isDrawing?: boolean
@@ -44,6 +47,12 @@ type Size = {
 }
 
 type ProgramData = {
+  transformFeedback?: {
+    prg: WebGLProgram
+    attLocs: GLint[]
+    attStrides: number[]
+    uniLocs: { [key: string]: WebGLUniformLocation }
+  }
   default?: {
     prg: WebGLProgram
     attLocs: GLint[]
@@ -52,8 +61,16 @@ type ProgramData = {
   }
 }
 
+type TransfromFeedbackVao = {
+  vao: WebGLVertexArrayObject
+  transformFeedback: WebGLTransformFeedback
+  bindBufferBaseVboList: Function
+  unbindBufferBaseVboList: Function
+}
+
 type DrawArraysObjectData = {
   vao: WebGLVertexArrayObject
+  transformFeedbackVao: TransfromFeedbackVao
   programData: ProgramData
   vertexLen: number
 }
@@ -138,28 +155,75 @@ class DrawArraysObject {
 
     // main object
     {
-      const { vao, programData, vertexLen } = this._data.main
-      const { prg, uniLocs } = programData.default
+      const {
+        vao,
+        transformFeedbackVao,
+        programData,
+        vertexLen
+      } = this._data.main
 
-      // use program
-      useProgram(this._gl, prg)
+      // transform feedback
+      {
+        const { prg } = programData.transformFeedback
+        const {
+          vao,
+          transformFeedback,
+          bindBufferBaseVboList,
+          unbindBufferBaseVboList
+        } = transformFeedbackVao
 
-      // matrix transform
-      this._matIV.identity(mat.m) // init
-      this._matIV.multiply(mat.tmp, mat.m, mat.mvp)
+        // use program
+        useProgram(this._gl, prg)
 
-      // set uniform
-      this._gl.uniformMatrix4fv(uniLocs['mvpMatrix'], false, mat.mvp)
-      this._gl.uniform1f(uniLocs['time'], _time * 0.001 * this._params.speed)
+        // bind transform feedback VAO & transform feedback
+        this._gl.bindVertexArray(vao)
+        this._gl.bindTransformFeedback(
+          this._gl.TRANSFORM_FEEDBACK,
+          transformFeedback
+        )
+        bindBufferBaseVboList()
 
-      // bind VAO
-      this._gl.bindVertexArray(vao)
+        // begin transform feedback
+        this._gl.enable(this._gl.RASTERIZER_DISCARD)
+        this._gl.beginTransformFeedback(this._gl.POINTS)
 
-      // draw
-      this._gl.drawArrays(this._gl.POINTS, 0, vertexLen)
+        // drow transform feedback
+        this._gl.drawArrays(this._gl.POINTS, 0, vertexLen)
 
-      // unbind VAO
-      this._gl.bindVertexArray(null)
+        // end transform feedback
+        this._gl.endTransformFeedback()
+        this._gl.disable(this._gl.RASTERIZER_DISCARD)
+
+        // unbind transform feedback VAO & transform feedback
+        unbindBufferBaseVboList()
+        this._gl.bindTransformFeedback(this._gl.TRANSFORM_FEEDBACK, null)
+        this._gl.bindVertexArray(null)
+      }
+
+      // default
+      {
+        const { prg, uniLocs } = programData.default
+
+        // use program
+        useProgram(this._gl, prg)
+
+        // matrix transform
+        this._matIV.identity(mat.m) // init
+        this._matIV.multiply(mat.tmp, mat.m, mat.mvp)
+
+        // set uniform
+        this._gl.uniformMatrix4fv(uniLocs['mvpMatrix'], false, mat.mvp)
+        this._gl.uniform1f(uniLocs['time'], _time * 0.001 * this._params.speed)
+
+        // bind VAO
+        this._gl.bindVertexArray(vao)
+
+        // draw
+        this._gl.drawArrays(this._gl.POINTS, 0, vertexLen)
+
+        // unbind VAO
+        this._gl.bindVertexArray(null)
+      }
     }
 
     return this
@@ -172,6 +236,8 @@ class DrawArraysObject {
     const _attDivisors: number[] /* int[0,inf) */ = []
     const _uniLocs: string[] = []
     const _vartexAtts: number[] = []
+    const _transformFeedbackAttLocs = []
+    const _transformFeedbackUniLocs: string[] = []
     let _vertexLen: number /* int[0,inf) */ = 0
 
     // set attributes
@@ -195,6 +261,21 @@ class DrawArraysObject {
       _attStrides,
       defaultVertexShader,
       defaultFragmentShader
+    )
+
+    // set transform feedback attributes
+    _transformFeedbackAttLocs[0] = 'vPosition'
+
+    // transform feedback program
+    _programData.transformFeedback = createProgramData(
+      this._gl,
+      _attLocs,
+      _transformFeedbackUniLocs,
+      _attStrides,
+      transformFeedbackVertexShader,
+      transformFeedbackFragmentShader,
+      _transformFeedbackAttLocs,
+      { bufferMode: this._gl.INTERLEAVED_ATTRIBS }
     )
 
     // create attribute
@@ -227,8 +308,23 @@ class DrawArraysObject {
       _enableAttributeOptionsList
     )
 
+    const { vao, vboList } = createVao(
+      this._gl,
+      [_vartexAtts],
+      _enableAttributeDataList
+    )
+
+    const _transformFeedbackVao = createTransformFeedbackVao(
+      this._gl,
+      [_vartexAtts],
+      _enableAttributeDataList,
+      vboList,
+      { draw: this._gl.DYNAMIC_COPY }
+    )
+
     return {
-      vao: createVao(this._gl, [_vartexAtts], _enableAttributeDataList),
+      vao,
+      transformFeedbackVao: _transformFeedbackVao,
       programData: _programData,
       vertexLen: _vertexLen
     }

@@ -31,15 +31,30 @@ export const createShader = (
   }
 }
 
+type CreateProgramOptions = {
+  bufferMode?: GLenum
+}
+
 export const createProgram = (
   gl: WebGL2RenderingContext,
   vs: WebGLShader,
-  fs: WebGLShader
+  fs: WebGLShader,
+  varyings: string[] = [],
+  options: CreateProgramOptions = {}
 ): WebGLProgram => {
+  const { bufferMode } = {
+    bufferMode: gl.SEPARATE_ATTRIBS,
+    ...options
+  }
+
   const _program: WebGLProgram = gl.createProgram()
 
   gl.attachShader(_program, vs)
   gl.attachShader(_program, fs)
+
+  if (varyings.length) {
+    gl.transformFeedbackVaryings(_program, varyings, bufferMode)
+  }
 
   gl.linkProgram(_program)
 
@@ -84,7 +99,7 @@ export const enableAttribute = (
   gl.enableVertexAttribArray(index)
   gl.vertexAttribPointer(index, size, type, normalized, stride, offset)
 
-  if(divisor){
+  if (divisor) {
     gl.vertexAttribDivisor(index, divisor)
   }
 }
@@ -116,11 +131,9 @@ export const createEnableAttributeDataList = (
   const _attrLenList = []
 
   for (let i = 0; attLocs.length - interleaveStrides.length + 1 > i; i++) {
-    i === 0
-      ? _attrLenList.push(interleaveStrides.length)
-      : _attrLenList.push(1)
+    i === 0 ? _attrLenList.push(interleaveStrides.length) : _attrLenList.push(1)
   }
-  
+
   return _attrLenList.map((val, index) => {
     const _dataList = []
     for (let i = 0; val > i; i++) {
@@ -163,6 +176,11 @@ export const createIbo = (
   return _ibo
 }
 
+type CreateVao = {
+  vao: WebGLVertexArrayObject
+  vboList: WebGLBuffer[]
+}
+
 type CreateVaoOptions = {
   draw?: GLenum | null
   indexes?: number[] | null
@@ -173,39 +191,82 @@ export const createVao = (
   dataList: number[][],
   enableAttributeDataList: EnableAttributeData[][],
   options: CreateVaoOptions = {}
-): WebGLVertexArrayObject => {
-  const _vao: WebGLVertexArrayObject = gl.createVertexArray()
+): CreateVao => {
   const { draw, indexes } = {
     draw: gl.STATIC_DRAW,
     indexes: null,
     ...options
   }
 
+  const _vao: WebGLVertexArrayObject = gl.createVertexArray()
+  const _vboList = []
+
   gl.bindVertexArray(_vao)
 
-  for(let i = 0; dataList.length > i; i++) {
+  for (let i = 0; dataList.length > i; i++) {
     const _vbo: WebGLBuffer = gl.createBuffer()
+    _vboList[i] = _vbo
     gl.bindBuffer(gl.ARRAY_BUFFER, _vbo)
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(dataList[i]), draw)
-    
-    for(const data of enableAttributeDataList[i]) {
+
+    for (const data of enableAttributeDataList[i]) {
       enableAttribute(gl, ...data)
     }
   }
-  
-  if(indexes) {
+
+  if (indexes) {
     const _ibo: WebGLBuffer = gl.createBuffer()
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, _ibo)
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int16Array(indexes), draw)
   }
-  
+
   gl.bindVertexArray(null)
   gl.bindBuffer(gl.ARRAY_BUFFER, null)
-  if(indexes) {
+  if (indexes) {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null)
   }
 
-  return _vao;
+  return {
+    vao: _vao,
+    vboList: _vboList
+  }
+}
+
+type CreateTransformFeedbackVao = {
+  vao: WebGLVertexArrayObject
+  transformFeedback: WebGLTransformFeedback
+  bindBufferBaseVboList: Function
+  unbindBufferBaseVboList: Function
+}
+
+export const createTransformFeedbackVao = (
+  gl: WebGL2RenderingContext,
+  dataList: number[][],
+  enableAttributeDataList: EnableAttributeData[][],
+  vboList: WebGLBuffer[],
+  options: CreateVaoOptions = {}
+): CreateTransformFeedbackVao => {
+  const _transformFeedback = gl.createTransformFeedback()
+  const { vao } = createVao(gl, dataList, enableAttributeDataList, options)
+
+  const _bindBufferBaseVboList = (): void => {
+    for (let i = 0; vboList.length > i; i++) {
+      gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, i, vboList[i])
+    }
+  }
+
+  const _unbindBufferBaseVboList = (): void => {
+    for (let i = 0; vboList.length > i; i++) {
+      gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, i, null)
+    }
+  }
+
+  return {
+    vao,
+    transformFeedback: _transformFeedback,
+    bindBufferBaseVboList: _bindBufferBaseVboList,
+    unbindBufferBaseVboList: _unbindBufferBaseVboList
+  }
 }
 
 type CreateTextureOptions = {
@@ -370,12 +431,20 @@ export const createProgramData = (
   uniLocs: string[],
   attStrides: number[],
   vShader: string,
-  fShader: string
+  fShader: string,
+  varyings: string[] = [],
+  createProgramOptions: CreateProgramOptions = {}
 ): ProgramData => {
   // create program
   const _vs: WebGLShader = createShader(gl, 'vertex', vShader)
   const _fs: WebGLShader = createShader(gl, 'fragment', fShader)
-  const _prg: WebGLProgram = createProgram(gl, _vs, _fs)
+  const _prg: WebGLProgram = createProgram(
+    gl,
+    _vs,
+    _fs,
+    varyings,
+    createProgramOptions
+  )
 
   // set attribute location
   const _attLocs: GLint[] = attLocs.map((item) => {
