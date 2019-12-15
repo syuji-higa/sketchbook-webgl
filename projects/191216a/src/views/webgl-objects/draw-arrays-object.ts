@@ -206,7 +206,10 @@ class DrawArraysObject {
 
         // set uniform
         this._gl.uniform1f(uniLocs['time'], _time * 0.001 * this._params.time)
-        this._gl.uniform2fv(uniLocs['mouse'], [mouse.x, -mouse.y])
+        this._gl.uniform2fv(uniLocs['mouse'], [
+          mouse.x * size.maxWR,
+          -mouse.y * size.maxHR
+        ])
 
         // drow transform feedback
         this._gl.drawArrays(this._gl.POINTS, 0, vertexLen)
