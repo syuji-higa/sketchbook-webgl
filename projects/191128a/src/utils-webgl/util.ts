@@ -232,40 +232,55 @@ export const createVao = (
   }
 }
 
-type CreateTransformFeedbackVao = {
-  vao: WebGLVertexArrayObject
-  transformFeedback: WebGLTransformFeedback
-  bindBufferBaseVboList: Function
-  unbindBufferBaseVboList: Function
-}
-
 export const createTransformFeedbackVao = (
   gl: WebGL2RenderingContext,
   dataList: number[][],
   enableAttributeDataList: EnableAttributeData[][],
   vboList: WebGLBuffer[],
   options: CreateVaoOptions = {}
-): CreateTransformFeedbackVao => {
-  const _transformFeedback = gl.createTransformFeedback()
-  const { vao } = createVao(gl, dataList, enableAttributeDataList, options)
+): CreateVao => {
+  const { draw } = {
+    draw: gl.STATIC_DRAW,
+    ...options
+  }
 
-  const _bindBufferBaseVboList = (): void => {
-    for (let i = 0; vboList.length > i; i++) {
-      gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, i, vboList[i])
+  const _vao: WebGLVertexArrayObject = gl.createVertexArray()
+
+  gl.bindVertexArray(_vao)
+
+  for (let i = 0; dataList.length > i; i++) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, vboList[i])
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(dataList[i]), draw)
+
+    for (const data of enableAttributeDataList[i]) {
+      enableAttribute(gl, ...data)
     }
   }
 
-  const _unbindBufferBaseVboList = (): void => {
-    for (let i = 0; vboList.length > i; i++) {
-      gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, i, null)
-    }
-  }
+  gl.bindVertexArray(null)
+  gl.bindBuffer(gl.ARRAY_BUFFER, null)
 
   return {
-    vao,
-    transformFeedback: _transformFeedback,
-    bindBufferBaseVboList: _bindBufferBaseVboList,
-    unbindBufferBaseVboList: _unbindBufferBaseVboList
+    vao: _vao,
+    vboList: vboList
+  }
+}
+
+export const bindBufferBaseVboList = (
+  gl: WebGL2RenderingContext,
+  vboList: WebGLBuffer[]
+): void => {
+  for (let i = 0; vboList.length > i; i++) {
+    gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, i, vboList[i])
+  }
+}
+
+export const unbindBufferBaseVboList = (
+  gl: WebGL2RenderingContext,
+  vboList: WebGLBuffer[]
+): void => {
+  for (let i = 0; vboList.length > i; i++) {
+    gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, i, null)
   }
 }
 

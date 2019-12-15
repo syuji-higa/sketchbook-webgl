@@ -1,6 +1,7 @@
 #version 300 es
 
 layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 velocity;
 uniform mat4 mvpMatrix;
 uniform float time;
 out vec3 vColor;
@@ -13,12 +14,9 @@ void main(void) {
   vColor = vec3(
     abs(sin(pos.x + T)) * 1.5,
     abs(cos(pos.y + T)) * 1.5,
-    sin(length(pos) + T) * .75
+    sin(length(pos) + T) * .75 + velocity.z
   );
 
-  pos.x = pos.x + sin(dot(pos.xy, pos.yz) + T * .97) * .5;
-  pos.y = pos.y + cos(dot(pos.xy, pos.xz) + T * .79) * .5;
-
   gl_Position = pos;
-  gl_PointSize = 4.;
+  gl_PointSize = 1.;
 }

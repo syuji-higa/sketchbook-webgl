@@ -3,6 +3,8 @@ import {
   useProgram,
   createVao,
   createTransformFeedbackVao,
+  bindBufferBaseVboList,
+  unbindBufferBaseVboList,
   createEnableAttributeOptionsList,
   createEnableAttributeDataList,
   createProgramData,
@@ -61,16 +63,16 @@ type ProgramData = {
   }
 }
 
-type TransfromFeedbackVao = {
+type VaoObject = {
   vao: WebGLVertexArrayObject
-  transformFeedback: WebGLTransformFeedback
-  bindBufferBaseVboList: Function
-  unbindBufferBaseVboList: Function
+  vboList: WebGLBuffer[]
 }
 
 type DrawArraysObjectData = {
-  vao: WebGLVertexArrayObject
-  transformFeedbackVao: TransfromFeedbackVao
+  frame: number
+  vaoList: VaoObject[]
+  transformFeedbackVaoList: VaoObject[]
+  transformFeedback: WebGLTransformFeedback
   programData: ProgramData
   vertexLen: number
 }
@@ -156,36 +158,41 @@ class DrawArraysObject {
     // main object
     {
       const {
-        vao,
-        transformFeedbackVao,
+        frame,
+        vaoList,
+        transformFeedbackVaoList,
+        transformFeedback,
         programData,
         vertexLen
       } = this._data.main
 
+      const _transformFeedbackFrame = frame
+      const _drowFraem: number = (frame + 1) % 2
+      this._data.main.frame = _drowFraem
+
       // transform feedback
       {
-        const { prg } = programData.transformFeedback
-        const {
-          vao,
-          transformFeedback,
-          bindBufferBaseVboList,
-          unbindBufferBaseVboList
-        } = transformFeedbackVao
+        const { prg, uniLocs } = programData.transformFeedback
 
         // use program
         useProgram(this._gl, prg)
 
         // bind transform feedback VAO & transform feedback
-        this._gl.bindVertexArray(vao)
+        this._gl.bindVertexArray(
+          transformFeedbackVaoList[_transformFeedbackFrame].vao
+        )
         this._gl.bindTransformFeedback(
           this._gl.TRANSFORM_FEEDBACK,
           transformFeedback
         )
-        bindBufferBaseVboList()
+        bindBufferBaseVboList(this._gl, vaoList[_drowFraem].vboList)
 
         // begin transform feedback
         this._gl.enable(this._gl.RASTERIZER_DISCARD)
         this._gl.beginTransformFeedback(this._gl.POINTS)
+
+        // set uniform
+        this._gl.uniform1f(uniLocs['time'], _time * 0.001 * this._params.speed)
 
         // drow transform feedback
         this._gl.drawArrays(this._gl.POINTS, 0, vertexLen)
@@ -195,7 +202,7 @@ class DrawArraysObject {
         this._gl.disable(this._gl.RASTERIZER_DISCARD)
 
         // unbind transform feedback VAO & transform feedback
-        unbindBufferBaseVboList()
+        unbindBufferBaseVboList(this._gl, vaoList[_drowFraem].vboList)
         this._gl.bindTransformFeedback(this._gl.TRANSFORM_FEEDBACK, null)
         this._gl.bindVertexArray(null)
       }
@@ -216,7 +223,7 @@ class DrawArraysObject {
         this._gl.uniform1f(uniLocs['time'], _time * 0.001 * this._params.speed)
 
         // bind VAO
-        this._gl.bindVertexArray(vao)
+        this._gl.bindVertexArray(vaoList[_drowFraem].vao)
 
         // draw
         this._gl.drawArrays(this._gl.POINTS, 0, vertexLen)
@@ -244,6 +251,9 @@ class DrawArraysObject {
     _attLocs[0] = 'position'
     _attStrides[0] = 3
     _attDivisors[0] = 0
+    _attLocs[1] = 'velocity'
+    _attStrides[1] = 3
+    _attDivisors[1] = 0
 
     // create interleave strides
     const _interleaveStrides = _attStrides.filter((val, index) => {
@@ -265,6 +275,10 @@ class DrawArraysObject {
 
     // set transform feedback attributes
     _transformFeedbackAttLocs[0] = 'vPosition'
+    _transformFeedbackAttLocs[1] = 'vVelocity'
+
+    // set transform feedback uniform location
+    _transformFeedbackUniLocs.push('time')
 
     // transform feedback program
     _programData.transformFeedback = createProgramData(
@@ -281,12 +295,23 @@ class DrawArraysObject {
     // create attribute
     {
       // create model
-      const { position } = square(1, 1, 100, 100)
+      const { position } = square(1, 1, 500, 500)
       const _len: number /* int[0,inf) */ = position.length / _attStrides[0]
       _vertexLen += _len
 
+      // create velocity
+      const velocity = []
+      for (let i = 0; _len * 3 > i; i += 3) {
+        velocity[i] = [0]
+        velocity[i + 1] = [0]
+        velocity[i + 2] = [0]
+      }
+
       // add vartex attribute for interleave
-      addInterleaveVertexAttr(_vartexAtts, _interleaveStrides, _len, [position])
+      addInterleaveVertexAttr(_vartexAtts, _interleaveStrides, _len, [
+        position,
+        velocity
+      ])
     }
 
     // create interleave data
@@ -308,23 +333,28 @@ class DrawArraysObject {
       _enableAttributeOptionsList
     )
 
-    const { vao, vboList } = createVao(
-      this._gl,
-      [_vartexAtts],
-      _enableAttributeDataList
-    )
+    const _vaoList = [
+      createVao(this._gl, [_vartexAtts], _enableAttributeDataList),
+      createVao(this._gl, [_vartexAtts], _enableAttributeDataList)
+    ]
 
-    const _transformFeedbackVao = createTransformFeedbackVao(
-      this._gl,
-      [_vartexAtts],
-      _enableAttributeDataList,
-      vboList,
-      { draw: this._gl.DYNAMIC_COPY }
-    )
+    const _transformFeedbackVaoList = _vaoList.map(({ vboList }) => {
+      return createTransformFeedbackVao(
+        this._gl,
+        [_vartexAtts],
+        _enableAttributeDataList,
+        vboList,
+        {
+          draw: this._gl.DYNAMIC_COPY
+        }
+      )
+    })
 
     return {
-      vao,
-      transformFeedbackVao: _transformFeedbackVao,
+      frame: 0,
+      vaoList: _vaoList,
+      transformFeedbackVaoList: _transformFeedbackVaoList,
+      transformFeedback: this._gl.createTransformFeedback(),
       programData: _programData,
       vertexLen: _vertexLen
     }
