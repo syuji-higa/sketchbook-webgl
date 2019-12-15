@@ -19,6 +19,11 @@ type State = {
   windowHeight: number // int[0,inf)
   windowWidthLastChangedHeight: number // int[0,inf)
   windowSizeType: string
+  mouseX: number // [-1,1]
+  mouseY: number // [-1,1]
+  alpha: number // [-1,1]
+  beta: number // [-1,1]
+  gamma: number // [-1,1]
 }
 
 const state: State = {
@@ -30,7 +35,12 @@ const state: State = {
   windowWidth: 0,
   windowHeight: 0,
   windowWidthLastChangedHeight: 0,
-  windowSizeType: ''
+  windowSizeType: '',
+  mouseX: 0,
+  mouseY: 0,
+  alpha: 0,
+  beta: 0,
+  gamma: 0
 }
 
 const mutations: { [key: string]: Function } = {
@@ -48,6 +58,21 @@ const mutations: { [key: string]: Function } = {
   },
   setWindowSizeType(state: State, data: string): void {
     state.windowSizeType = data
+  },
+  setMouseX(state: State, data: number): void {
+    state.mouseX = data
+  },
+  setMouseY(state: State, data: number): void {
+    state.mouseY = data
+  },
+  setAlpha(state: State, data: number): void {
+    state.alpha = data
+  },
+  setBeta(state: State, data: number): void {
+    state.beta = data
+  },
+  setGamma(state: State, data: number): void {
+    state.gamma = data
   }
 }
 

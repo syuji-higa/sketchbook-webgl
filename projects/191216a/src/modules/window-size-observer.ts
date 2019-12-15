@@ -12,9 +12,9 @@ type EventFunction = {
 }
 
 class WindowSizeObserver {
-  _isMobile: boolean = false
-  _resizeDebounce: Function
-  _resizeEvent: EventFunction
+  private _isMobile: boolean = false
+  private _resizeDebounce: Function
+  private _resizeEvent: EventFunction
 
   constructor() {
     this._isMobile = !!store.state.platform.type.match(/^mobile$/)

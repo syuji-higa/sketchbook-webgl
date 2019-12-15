@@ -1,9 +1,9 @@
-type Options = {
+type DebounceOptions = {
   interval?: number /* int[0,inf) */
   isFirstRun?: boolean
 }
 
-export const debounce = (options: Options = {}): Function => {
+export const debounce = (options: DebounceOptions = {}): Function => {
   const { interval, isFirstRun } = {
     interval: 100,
     isFirstRun: false,

@@ -5,3 +5,4 @@
 - [190715a](https://syuji-higa.github.io/sketchbook-webgl/190715a/)
 - [191120a](https://syuji-higa.github.io/sketchbook-webgl/191120a/)
 - [191122a](https://syuji-higa.github.io/sketchbook-webgl/191122a/)
+- [191216a](https://syuji-higa.github.io/sketchbook-webgl/191216a/)

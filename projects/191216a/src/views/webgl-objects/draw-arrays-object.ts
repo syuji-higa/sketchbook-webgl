@@ -48,6 +48,11 @@ type Size = {
   minHR: number /* [0,1] minHeightRatio */
 }
 
+type Mouse = {
+  x: number /* [-1,1] */
+  y: number /* [-1,1] */
+}
+
 type ProgramData = {
   transformFeedback?: {
     prg: WebGLProgram
@@ -82,7 +87,7 @@ type ObjectData = {
 }
 
 type Params = {
-  speed: number /* [0,inf) */
+  time: number /* [0,inf) */
 }
 
 class DrawArraysObject {
@@ -92,7 +97,7 @@ class DrawArraysObject {
   private _state: State = {}
   private _data: ObjectData = {}
   private _params: Params = {
-    speed: 1
+    time: 1
   }
 
   constructor(dpr: number /* [0,inf) */) {
@@ -104,7 +109,7 @@ class DrawArraysObject {
         .addFolder({
           title: 'Draw Arrays Object'
         })
-        .addInput(this._params, 'speed', { min: 0, max: 2 })
+        .addInput(this._params, 'time', { min: 0, max: 5 })
     }
   }
 
@@ -148,10 +153,18 @@ class DrawArraysObject {
     return this
   }
 
-  draw(time: number /* int[0,inf) */, mat: Mat, size: Size): DrawArraysObject {
+  draw(
+    time: number /* int[0,inf) */,
+    mat: Mat,
+    size: Size,
+    mouse: Mouse
+  ): DrawArraysObject {
     if (!this._state.isDrawing) {
       return
     }
+
+    // set blend mode
+    this._gl.blendFunc(this._gl.DST_COLOR, this._gl.ZERO)
 
     const _time: number /* [0,inf] */ = time - this._state.startTime
 
@@ -192,7 +205,8 @@ class DrawArraysObject {
         this._gl.beginTransformFeedback(this._gl.POINTS)
 
         // set uniform
-        this._gl.uniform1f(uniLocs['time'], _time * 0.001 * this._params.speed)
+        this._gl.uniform1f(uniLocs['time'], _time * 0.001 * this._params.time)
+        this._gl.uniform2fv(uniLocs['mouse'], [mouse.x, -mouse.y])
 
         // drow transform feedback
         this._gl.drawArrays(this._gl.POINTS, 0, vertexLen)
@@ -220,7 +234,7 @@ class DrawArraysObject {
 
         // set uniform
         this._gl.uniformMatrix4fv(uniLocs['mvpMatrix'], false, mat.mvp)
-        this._gl.uniform1f(uniLocs['time'], _time * 0.001 * this._params.speed)
+        this._gl.uniform1f(uniLocs['time'], _time * 0.001 * this._params.time)
 
         // bind VAO
         this._gl.bindVertexArray(vaoList[_drowFraem].vao)
@@ -252,7 +266,7 @@ class DrawArraysObject {
     _attStrides[0] = 3
     _attDivisors[0] = 0
     _attLocs[1] = 'velocity'
-    _attStrides[1] = 3
+    _attStrides[1] = 4
     _attDivisors[1] = 0
 
     // create interleave strides
@@ -278,7 +292,7 @@ class DrawArraysObject {
     _transformFeedbackAttLocs[1] = 'vVelocity'
 
     // set transform feedback uniform location
-    _transformFeedbackUniLocs.push('time')
+    _transformFeedbackUniLocs.push('time', 'mouse')
 
     // transform feedback program
     _programData.transformFeedback = createProgramData(

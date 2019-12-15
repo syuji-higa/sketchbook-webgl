@@ -24,6 +24,8 @@ type State = {
   minRatio: number // [0,1]
   minWidthRatio: number // [0,1]
   minHeightRatio: number // [0,1]
+  mouseX: number // [-1,1]
+  mouseY: number // [-1,1]
 }
 
 type Options = {
@@ -40,8 +42,10 @@ type StoreStateObject = {
 }
 
 class WebGL {
+  private _isMobile: boolean = false
   private _slefClassName: string = ''
   private _dpr: number = 0 // [0,inf)
+  private _mouseAccel: number = 0.1 // [0,inf)
   private _$wrap: Element | null
   private _$canvas: HTMLCanvasElement | null
   private _gl: WebGL2RenderingContext | null
@@ -60,6 +64,7 @@ class WebGL {
   constructor(options: Options = {}) {
     const { slefClassName } = { ...WebGL._defaultOptions, ...options }
 
+    this._isMobile = !!store.state.platform.type.match(/^mobile$/)
     this._slefClassName = slefClassName
     this._dpr = 1 // devicePixelRatio or number
   }
@@ -76,7 +81,9 @@ class WebGL {
       maxHeightRatio: 0,
       minRatio: 0,
       minWidthRatio: 0,
-      minHeightRatio: 0
+      minHeightRatio: 0,
+      mouseX: 0,
+      mouseY: 0
     }
 
     // create matrix
@@ -107,7 +114,7 @@ class WebGL {
     this._gl.enable(this._gl.CULL_FACE) // culling
     this._gl.enable(this._gl.DEPTH_TEST) // depth test
     this._gl.depthFunc(this._gl.LEQUAL) // depth test
-    // this._gl.enable(this._gl.BLEND) // blend mode
+    this._gl.enable(this._gl.BLEND) // blend mode
 
     // create object
     this._objects = {
@@ -222,12 +229,15 @@ class WebGL {
   }
 
   private _render() {
+    // calculation mouse
+    this._calcMouse()
+
     // clear canvas
     this._gl.clearColor(1, 1, 1, 1)
     this._gl.clear(this._gl.COLOR_BUFFER_BIT)
 
-    // // clear blend mode
-    // this._gl.blendFunc(this._gl.SRC_ALPHA, this._gl.ONE_MINUS_SRC_ALPHA)
+    // clear blend mode
+    this._gl.blendFunc(this._gl.SRC_ALPHA, this._gl.ONE_MINUS_SRC_ALPHA)
 
     const { width, height } = this._state
     const { v, p, tmp } = this._matrix
@@ -250,19 +260,47 @@ class WebGL {
 
     // draw object
     for (const object of Object.values(this._objects)) {
-      object.draw(Date.now(), this._matrix, {
-        w: width,
-        h: height,
-        wR: this._state.widthRatio,
-        hR: this._state.heightRatio,
-        maxR: this._state.maxRatio,
-        maxWR: this._state.maxWidthRatio,
-        maxHR: this._state.maxHeightRatio,
-        minR: this._state.minRatio,
-        minWR: this._state.minWidthRatio,
-        minHR: this._state.minHeightRatio
-      })
+      object.draw(
+        Date.now(),
+        this._matrix,
+        // size
+        {
+          w: width,
+          h: height,
+          wR: this._state.widthRatio,
+          hR: this._state.heightRatio,
+          maxR: this._state.maxRatio,
+          maxWR: this._state.maxWidthRatio,
+          maxHR: this._state.maxHeightRatio,
+          minR: this._state.minRatio,
+          minWR: this._state.minWidthRatio,
+          minHR: this._state.minHeightRatio
+        },
+        // mouse
+        {
+          x: this._state.mouseX,
+          y: this._state.mouseY
+        }
+      )
     }
+  }
+
+  private _calcMouse() {
+    let _x: number = 0
+    let _y: number = 0
+    if (this._isMobile) {
+      const { beta, gamma } = store.state
+      _x = gamma
+      _y = beta
+    } else {
+      const { mouseX, mouseY } = store.state
+      _x = mouseX
+      _y = mouseY
+    }
+
+    const { mouseX, mouseY } = this._state
+    this._state.mouseX += (_x - mouseX) * this._mouseAccel
+    this._state.mouseY += (_y - mouseY) * this._mouseAccel
   }
 }
 
